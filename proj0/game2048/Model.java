@@ -109,16 +109,79 @@ public class Model extends Observable {
     public boolean tilt(Side side) {
         boolean changed;
         changed = false;
+        board.setViewingPerspective(side);
 
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
+        int size = board.size();
+        for(int row=size-2;row>=0;row--){
+            for(int col=0;col<size;col++){
+                if(board.tile(col, row) != null){
+                    tilt(col, row, board);
+                    changed = true;
+                }
+            }
+        }
 
         checkGameOver();
         if (changed) {
             setChanged();
         }
         return changed;
+    }
+
+    private void tilt(int col, int row, Board b){
+        if(endCondition(col, row, b)){
+            return;
+        }
+        upMoveRule(col, row, b);
+        tilt(col, row+1, b);
+   }
+
+    private static boolean ifMerged = false;
+   /** setting the end of recursion,
+     * if the up tile is not null and not equal to the current tile, return True
+     */
+    public boolean endCondition(int col, int row, Board b){
+       if(row == b.size()-1){
+           return true;
+       }
+
+       Tile t = b.tile(col, row);
+       Tile tup = b.tile(col, row+1);
+       if((tup != null) && (t.value() != tup.value())){
+           return true;
+       }
+
+       if((tup != null) && (t.value() == tup.value()) && ifMerged){
+           ifMerged = false;
+           return true;
+       }
+       return false;
+   }
+
+    /** rules of moving upwards */
+    public void upMoveRule(int col, int row, Board b){
+        Tile t = b.tile(col, row);
+        Tile tup = b.tile(col, row+1);
+        if(tup == null){
+            b.move(col, row+1, t);
+        }else{
+            if(t.value() == tup.value()){
+                mergeTwo(col, row, b, t, tup);
+                ifMerged = true;
+            }
+        }
+    }
+
+    /** up merge operation */
+    public void mergeTwo(int col, int row, Board b, Tile t1, Tile t2){
+        b.move(col, row+1, t1);
+        // double scores
+        score += t2.value() * 2;
+        // call the Tile.merge method
+        t2 = t1.merge(col, row+1, t2);
     }
 
     /** Checks if the game is over and sets the gameOver variable
@@ -138,6 +201,14 @@ public class Model extends Observable {
      * */
     public static boolean emptySpaceExists(Board b) {
         // TODO: Fill in this function.
+        int size = b.size();
+        for(int col=0;col<size;col++){
+            for(int row=0;row<size;row++){
+                if(b.tile(col,row) == null){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -148,6 +219,14 @@ public class Model extends Observable {
      */
     public static boolean maxTileExists(Board b) {
         // TODO: Fill in this function.
+        int size = b.size();
+        for(int col=0;col<size;col++){
+            for(int row=0;row<size;row++){
+                if((b.tile(col,row) != null)&&(b.tile(col,row).value() == MAX_PIECE)){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -159,7 +238,21 @@ public class Model extends Observable {
      */
     public static boolean atLeastOneMoveExists(Board b) {
         // TODO: Fill in this function.
-        return false;
+        int size = b.size();
+        for(int col=0;col<size;col++){
+            for(int row=0;row<size;row++){
+                Tile item = b.tile(col,row);
+                if((item != null)){
+                    if((col+1 < size) && (b.tile(col+1,row) != null) && (b.tile(col+1,row).value() == item.value())){
+                        return true;
+                    }
+                    if((row+1 < size) && (b.tile(col,row+1) != null) && (b.tile(col,row+1).value() == item.value())){
+                        return true;
+                    }
+                }
+            }
+        }
+        return emptySpaceExists(b);
     }
 
 
